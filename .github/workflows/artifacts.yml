@@ -16,6 +16,9 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
+      - name: Force git:// submodule URLs to https://
+        run: git config --global url."https://github.com/".insteadOf "git://github.com/"
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
