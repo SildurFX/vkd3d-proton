@@ -13,7 +13,12 @@ jobs:
       id: checkout-code
       uses: actions/checkout@v4
       with:
-        submodules: recursive
+        submodules: false
+
+    - name: Initialize Submodules Manually
+      run: |
+        git submodule init
+        git submodule update --remote --recursive || git submodule update --init --recursive
 
     - name: Setup problem matcher
       uses: Joshua-Ashton/gcc-problem-matcher@v3
@@ -39,5 +44,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: vkd3d-proton-${{ env.VERSION_NAME }}
-        path: build/vkd3d-proton-${{ env.VERSION_NAME }}
+        path: build/
         if-no-files-found: error
