@@ -15,7 +15,7 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Setup problem matcher
+    - name: Setup problem matcher3
       uses: Joshua-Ashton/gcc-problem-matcher@v3
 
     - name: Install System Native Utilities
