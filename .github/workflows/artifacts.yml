@@ -22,7 +22,7 @@ jobs:
 
     - name: Configure Toolchain Path
       run: |
-        URL="https://github.com{{ env.LLVM_MINGW_VERSION }}/llvm-mingw-${{ env.LLVM_MINGW_VERSION }}-ucrt-ubuntu-22.04-x86_64.tar.xz"
+        URL="https://github.com/mstorsjo/llvm-mingw/releases/download/${{ env.LLVM_MINGW_VERSION }}/llvm-mingw-${{ env.LLVM_MINGW_VERSION }}-ucrt-ubuntu-22.04-x86_64.tar.xz"
         curl -sL "$URL" | tar -xJ
         echo "$(pwd)/llvm-mingw-${{ env.LLVM_MINGW_VERSION }}-ucrt-ubuntu-22.04-x86_64/bin" >> $GITHUB_PATH
 
