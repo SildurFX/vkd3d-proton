@@ -7,6 +7,7 @@ cpu_family = target_machine.cpu_family()
 vkd3d_compiler = meson.get_compiler('c')
 vkd3d_is_msvc  = vkd3d_compiler.get_id() == 'msvc'
 vkd3d_is_clang = vkd3d_compiler.get_id() == 'clang'
+vkd3d_is_gcc   = vkd3d_compiler.get_id() == 'gcc'
 vkd3d_c_std    = 'c11'
 vkd3d_platform = target_machine.system()
 
@@ -39,6 +40,10 @@ endif
 
 add_project_arguments('-D_GNU_SOURCE',   language : 'c')
 add_project_arguments('-DPACKAGE_VERSION="' + meson.project_version() + '"',   language : 'c')
+
+if target_machine.cpu() == 'arm64ec'
+  add_project_arguments('-DVKD3D_NO_ASM', language : 'c')
+endif
 
 if vkd3d_platform == 'windows'
   add_project_arguments('-D_WIN32_WINNT=0x600', language : 'c')
@@ -101,20 +106,18 @@ endif
 
 add_project_arguments(vkd3d_compiler.get_supported_arguments([
     '-fvisibility=hidden',
-    # For some reason, the use of VLAs isn't in all+extra+pedantic
-    # We don't want to use these accidentally from consts...
     '-Wvla',
     '-Wno-format',
     '-Wno-missing-field-initializers',
     '-Wno-unused-parameter',
     '-Wdeclaration-after-statement',
-    '/wd4244', # Narrowing conversion
-    '/wd4101', # Unreferenced local variable
-    '/wd4267', # Another narrowing conversion
-    '/wd4996', # Secure no warnings
-    '/wd4334', # Result of 32-bit shift cast to 64-bit
-    '/wd4146', # Unary minus on unsigned
-    '/wd4305', # Truncation from double to float
+    '/wd4244', 
+    '/wd4101', 
+    '/wd4267', 
+    '/wd4996', 
+    '/wd4334', 
+    '/wd4146', 
+    '/wd4305', 
     ]),
   language : 'c')
 
@@ -124,8 +127,6 @@ if cpu_family == 'x86'
       '-Wl,--enable-stdcall-fixup']),
     language : [ 'c', 'cpp' ])
 
-  # Need to link against libatomic for 64-bit atomic emulation on x86
-  # when using clang.
   if vkd3d_is_clang
     lib_atomic = vkd3d_compiler.find_library('atomic')
     vkd3d_extra_libs += lib_atomic
@@ -133,8 +134,6 @@ if cpu_family == 'x86'
 endif
 
 if not vkd3d_is_msvc
-  # We need to set the section alignment for debug symbols to
-  # work properly as well as avoiding a memcpy from the Wine loader.
   if vkd3d_compiler.has_link_argument('-Wl,--file-alignment=4096')
     add_global_link_arguments('-Wl,--file-alignment=4096', language : [ 'c', 'cpp' ])
   endif

@@ -1,31 +1,40 @@
-name: Artifacts (Package)
-
+name: VKD3D-Proton ARM64EC Build
 on: [push, pull_request, workflow_dispatch]
 
+env:
+  LLVM_MINGW_VERSION: "20260616"
+
 jobs:
-  build-artifacts:
-    runs-on: ubuntu-20.04
+  artifacts-mingw-w64:
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
-      id: checkout-code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         submodules: recursive
 
+    - name: Setup problem matcher
+      uses: Joshua-Ashton/gcc-problem-matcher@v3
+
+    - name: Install System Native Utilities
+      run: sudo apt-get update && sudo apt-get install -y meson ninja-build glslang-tools
+
+    - name: Configure Toolchain Path
+      run: |
+        URL="https://github.com{{ env.LLVM_MINGW_VERSION }}/llvm-mingw-${{ env.LLVM_MINGW_VERSION }}-ucrt-ubuntu-22.04-x86_64.tar.xz"
+        curl -sL "$URL" | tar -xJ
+        echo "$(pwd)/llvm-mingw-${{ env.LLVM_MINGW_VERSION }}-ucrt-ubuntu-22.04-x86_64/bin" >> $GITHUB_PATH
+
     - name: Build release
       id: build-release
-      uses: Joshua-Ashton/arch-mingw-github-action@v5
-      with:
-        command: |
-          export VERSION_NAME="${GITHUB_REF##*/}-${GITHUB_SHA##*/}"
-          ./package-release.sh ${VERSION_NAME} build --no-package
-          echo "VERSION_NAME=${VERSION_NAME}" >> $GITHUB_ENV
+      run: |
+        export VERSION_NAME="${GITHUB_REF##*/}-${GITHUB_SHA##*/}"
+        ./package-release.sh ${VERSION_NAME} build --no-package
+        echo "VERSION_NAME=${VERSION_NAME}" >> $GITHUB_ENV
 
     - name: Upload artifacts
-      id: upload-artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: vkd3d-proton-${{ env.VERSION_NAME }}
-        path: build/vkd3d-proton-${{ env.VERSION_NAME }}
-        if-no-files-found: error
+        path: build/
