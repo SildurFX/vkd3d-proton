@@ -38,5 +38,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: vkd3d-proton-${{ env.VERSION_NAME }}
-        path: build/vkd3d-proton-${{ env.VERSION_NAME }}
+        path: build/
         if-no-files-found: error
