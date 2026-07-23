@@ -16,11 +16,6 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      # Check out only the top-level repo here -- do NOT let this action
-      # touch submodules. actions/checkout resets/unsets global
-      # url.*.insteadOf config as part of its own submodule-auth setup,
-      # which would wipe out the git:// -> https:// rewrite below if it
-      # ran first.
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -46,7 +41,12 @@ jobs:
         run: |
           curl -LfO "https://github.com/bylaws/llvm-mingw/releases/download/${LLVM_MINGW_VERSION}/${LLVM_MINGW_DIST}.tar.xz"
           tar xf "${LLVM_MINGW_DIST}.tar.xz"
-          echo "$PWD/${LLVM_MINGW_DIST}/bin" >> "$GITHUB_PATH"
+          echo "LLVM_MINGW_BIN=$PWD/${LLVM_MINGW_DIST}/bin" >> "$GITHUB_ENV"
+
+      - name: Point build-arm64ec.txt at the llvm-mingw toolchain by absolute path
+        run: |
+          sed -i "s#'arm64ec-w64-mingw32-#'${LLVM_MINGW_BIN}/arm64ec-w64-mingw32-#g" build-arm64ec.txt
+          cat build-arm64ec.txt
 
       - name: Build release (win64 + win32 + arm64ec)
         run: |
