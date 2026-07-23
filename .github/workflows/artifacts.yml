@@ -43,10 +43,10 @@ jobs:
           tar xf "${LLVM_MINGW_DIST}.tar.xz"
           echo "LLVM_MINGW_BIN=$PWD/${LLVM_MINGW_DIST}/bin" >> "$GITHUB_ENV"
 
-      - name: Point build-arm64ec.txt at the llvm-mingw toolchain by absolute path
-        run: |
-          sed -i "s#'arm64ec-w64-mingw32-#'${LLVM_MINGW_BIN}/arm64ec-w64-mingw32-#g" build-arm64ec.txt
-          cat build-arm64ec.txt
+      # - name: Point build-arm64ec.txt at the llvm-mingw toolchain by absolute path
+      #  run: |
+          # sed -i "s#'arm64ec-w64-mingw32-#'${LLVM_MINGW_BIN}/arm64ec-w64-mingw32-#g" build-arm64ec.txt
+          # cat build-arm64ec.txt
 
       - name: Build release (win64 + win32 + arm64ec)
         run: |
