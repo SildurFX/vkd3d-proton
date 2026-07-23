@@ -1,42 +1,76 @@
-name: Artifacts (Package)
+name: Build vkd3d-proton (ARM64EC)
 
-on: [push, pull_request, workflow_dispatch]
+on:
+  workflow_dispatch:
+  push:
+    branches: [ arm64ec ]
 
 env:
-  LLVM_MINGW_VERSION: "20260616"
+  VKD3D_REF: v2.3.1
+  LLVM_MINGW_VERSION: 20250920
+  LLVM_MINGW_DIST: llvm-mingw-20250920-ucrt-ubuntu-22.04-x86_64
 
 jobs:
-  build-artifacts:
-    runs-on: ubuntu-latest
-
+  build-arm64ec:
+    runs-on: ubuntu-22.04
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        submodules: recursive
+      - name: Check out vkd3d-proton
+        uses: actions/checkout@v4
+        with:
+          repository: HansKristian-Work/vkd3d-proton
+          ref: ${{ env.VKD3D_REF }}
+          submodules: recursive
 
-    - name: Setup problem matcher3
-      uses: Joshua-Ashton/gcc-problem-matcher@v3
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build python3-pip glslang-tools
+          pip install --user meson
 
-    - name: Install System Native Utilities
-      run: sudo apt-get update && sudo apt-get install -y meson ninja-build glslang-tools
+      - name: Fetch ARM64EC-capable llvm-mingw toolchain
+        run: |
+          curl -LO "https://github.com/bylaws/llvm-mingw/releases/download/${LLVM_MINGW_VERSION}/${LLVM_MINGW_DIST}.tar.xz"
+          tar xf "${LLVM_MINGW_DIST}.tar.xz"
+          # Prepend to PATH for all later steps - must come before any host ar/binutils
+          echo "$PWD/${LLVM_MINGW_DIST}/bin" >> "$GITHUB_PATH"
 
-    - name: Configure Toolchain Path
-      run: |
-        URL="https://github.com/mstorsjo/llvm-mingw/releases/download/${{ env.LLVM_MINGW_VERSION }}/llvm-mingw-${{ env.LLVM_MINGW_VERSION }}-ucrt-ubuntu-22.04-x86_64.tar.xz"
-        curl -sL "$URL" | tar -xJ
-        echo "$(pwd)/llvm-mingw-${{ env.LLVM_MINGW_VERSION }}-ucrt-ubuntu-22.04-x86_64/bin" >> $GITHUB_PATH
+      - name: Write arm64ec meson cross-file
+        run: |
+          cat > build-arm64ec.txt <<'EOF'
+          [binaries]
+          ar = 'arm64ec-w64-mingw32-ar'
+          c = ['arm64ec-w64-mingw32-gcc', '-march=armv8-a', '-mtune=cortex-a57']
+          cpp = ['arm64ec-w64-mingw32-g++', '-march=armv8-a', '-mtune=cortex-a57']
+          ld = 'arm64ec-w64-mingw32-ld'
+          windres = 'arm64ec-w64-mingw32-windres'
+          strip = 'arm64ec-w64-mingw32-strip'
+          widl = 'arm64ec-w64-mingw32-widl'
+          pkgconfig = 'pkg-config'
 
-    - name: Build release
-      id: build-release
-      run: |
-        export VERSION_NAME="${GITHUB_REF##*/}-${GITHUB_SHA##*/}"
-        ./package-release.sh ${VERSION_NAME} build --no-package
-        echo "VERSION_NAME=${VERSION_NAME}" >> $GITHUB_ENV
+          [host_machine]
+          system = 'windows'
+          cpu_family = 'aarch64'
+          cpu = 'aarch64'
+          endian = 'little'
 
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: vkd3d-proton-${{ env.VERSION_NAME }}
-        path: build/
-        if-no-files-found: error
+          [properties]
+          needs_exe_wrapper = true
+          EOF
+
+      - name: Configure
+        run: |
+          meson setup build-arm64ec \
+            --cross-file build-arm64ec.txt \
+            --buildtype release \
+            -Denable_extras=true \
+            -Denable_tests=false
+
+      - name: Build
+        run: ninja -C build-arm64ec
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: vkd3d-proton-arm64ec-${{ env.VKD3D_REF }}
+          path: |
+            build-arm64ec/**/*.dll
