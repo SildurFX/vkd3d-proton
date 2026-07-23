@@ -1,51 +1,32 @@
-name: VKD3D-Proton ARM64EC Build
+name: Artifacts (Package)
+
 on: [push, pull_request, workflow_dispatch]
 
-env:
-  LLVM_MINGW_VERSION: "20260616"
-
 jobs:
-  artifacts-mingw-w64:
-    runs-on: ubuntu-latest
+  build-artifacts:
+    runs-on: ubuntu-20.04
 
     steps:
     - name: Checkout code
       id: checkout-code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v2
       with:
-        # Keep false to prevent the initial clone from hanging on dead tracking URLs
-        submodules: false
-
-    - name: Force Clean Sync of All Submodules
-      # This cleans out older links, updates paths, and recursively pulls nested dependencies
-      run: |
-        git submodule deinit -f . || true
-        git submodule init
-        git submodule update --init --recursive --force
-
-    - name: Setup problem matcher
-      uses: Joshua-Ashton/gcc-problem-matcher@v3
-
-    - name: Install System Native Utilities
-      run: sudo apt-get update && sudo apt-get install -y meson ninja-build glslang-tools
-
-    - name: Configure Toolchain Path
-      run: |
-        URL="https://github.com/mstorsjo/llvm-mingw/releases/download/${{ env.LLVM_MINGW_VERSION }}/llvm-mingw-${{ env.LLVM_MINGW_VERSION }}-ucrt-ubuntu-22.04-x86_64.tar.xz"
-        curl -sL "$URL" | tar -xJ
-        echo "$(pwd)/llvm-mingw-${{ env.LLVM_MINGW_VERSION }}-ucrt-ubuntu-22.04-x86_64/bin" >> $GITHUB_PATH
+        submodules: recursive
 
     - name: Build release
       id: build-release
-      run: |
-        export VERSION_NAME="${GITHUB_REF##*/}-${GITHUB_SHA##*/}"
-        ./package-release.sh ${VERSION_NAME} build --no-package
-        echo "VERSION_NAME=${VERSION_NAME}" >> $GITHUB_ENV
+      uses: Joshua-Ashton/arch-mingw-github-action@v5
+      with:
+        command: |
+          export VERSION_NAME="${GITHUB_REF##*/}-${GITHUB_SHA##*/}"
+          # Forces the compiler to process your custom arm64ec cross configuration
+          ./package-release.sh ${VERSION_NAME} build --no-package --cross-file build-arm64ec.txt
+          echo "VERSION_NAME=${VERSION_NAME}" >> $GITHUB_ENV
 
     - name: Upload artifacts
       id: upload-artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v2
       with:
         name: vkd3d-proton-${{ env.VERSION_NAME }}
-        path: build/
+        path: build/vkd3d-proton-${{ env.VERSION_NAME }}
         if-no-files-found: error
