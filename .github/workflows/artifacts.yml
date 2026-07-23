@@ -6,7 +6,7 @@ env:
   LLVM_MINGW_VERSION: "20260616"
 
 jobs:
-  artifacts-mingw-w64:
+  build-artifacts:
     runs-on: ubuntu-latest
 
     steps:
