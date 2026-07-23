@@ -16,13 +16,21 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - name: Force git:// submodule URLs to https://
-        run: git config --global url."https://github.com/".insteadOf "git://github.com/"
-
+      # Check out only the top-level repo here -- do NOT let this action
+      # touch submodules. actions/checkout resets/unsets global
+      # url.*.insteadOf config as part of its own submodule-auth setup,
+      # which would wipe out the git:// -> https:// rewrite below if it
+      # ran first.
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
+
+      - name: Force git:// submodule URLs to https://
+        run: git config --global url."https://github.com/".insteadOf "git://github.com/"
+
+      - name: Fetch submodules
+        run: git submodule update --init --recursive
 
       - name: Install standard build dependencies
         run: |
