@@ -25,6 +25,7 @@ opt_nopackage=0
 opt_devbuild=0
 opt_native=0
 opt_buildtype="release"
+opt_strip=--strip
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -35,6 +36,7 @@ while [ $# -gt 0 ]; do
     opt_nopackage=1
     ;;
   "--dev-build")
+    opt_strip=
     opt_nopackage=1
     opt_devbuild=1
     ;;
@@ -54,10 +56,10 @@ function build_arch {
 
   cd "$VKD3D_SRC_DIR"
 
-  meson "$@"                           \
+  meson setup "$@"                     \
         --buildtype "${opt_buildtype}" \
         --prefix "$VKD3D_BUILD_DIR"    \
-        --strip                        \
+        $opt_strip                     \
         --bindir "x${arch}"            \
         --libdir "x${arch}"            \
         "$VKD3D_BUILD_DIR/build.${arch}"
@@ -69,8 +71,6 @@ function build_arch {
     if [ $opt_native -eq 0 ]; then
         # get rid of some useless .a files
         rm "$VKD3D_BUILD_DIR/x${arch}/"*.!(dll)
-        # get rid of vkd3d-proton-utils.dll
-        rm "$VKD3D_BUILD_DIR/x${arch}/libvkd3d-proton-utils-"*
     fi
     rm -R "$VKD3D_BUILD_DIR/build.${arch}"
   fi
@@ -90,8 +90,6 @@ function package {
 if [ $opt_native -eq 0 ]; then
   build_arch 64 --cross-file build-win64.txt
   build_arch 86 --cross-file build-win32.txt
-  build_arch arm64ec --cross-file build-arm64ec.txt
-  
   build_script
 else
   build_arch 64
