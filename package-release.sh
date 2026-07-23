@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# trigger workflow
 
 set -e
 
