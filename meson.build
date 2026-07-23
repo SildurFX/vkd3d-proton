@@ -41,9 +41,9 @@ endif
 add_project_arguments('-D_GNU_SOURCE',   language : 'c')
 add_project_arguments('-DPACKAGE_VERSION="' + meson.project_version() + '"',   language : 'c')
 
-if target_machine.cpu() == 'arm64ec'
-  add_project_arguments('-DVKD3D_NO_ASM', language : 'c')
-endif
+# if target_machine.cpu() == 'arm64ec'
+#   add_project_arguments('-DVKD3D_NO_ASM', language : 'c')
+# endif
 
 if vkd3d_platform == 'windows'
   add_project_arguments('-D_WIN32_WINNT=0x600', language : 'c')
