@@ -8,10 +8,7 @@ cpu_family = target_machine.cpu_family()
 vkd3d_compiler = meson.get_compiler('c')
 vkd3d_is_msvc  = vkd3d_compiler.get_id() == 'msvc' or vkd3d_compiler.get_id() == 'clang-cl'
 vkd3d_is_clang = vkd3d_compiler.get_id() == 'clang' or vkd3d_compiler.get_id() == 'clang-cl'
-
-# added for v2.3.1
-vkd3d_c_std    = 'c11'
-
+vkd3d_c_std    = 'c11'  # added for v2.3.1
 vkd3d_platform = target_machine.system()
 
 vkd3d_buildtype = get_option('buildtype')
@@ -25,10 +22,23 @@ enable_descriptor_qa      = get_option('enable_descriptor_qa')
 # enable_extended_emulation = get_option('enable_extended_emulation')
 enable_trace              = get_option('enable_trace')
 
+# added for v2.3.1
+enable_d3d12             = get_option('enable_d3d12')
+if enable_d3d12 == 'auto'
+  enable_d3d12 = vkd3d_platform == 'windows'
+else
+  enable_d3d12 = enable_d3d12 == 'true'
+endif
+
 if enable_trace == 'auto'
   enable_trace = vkd3d_debug
 else
   enable_trace = enable_trace == 'true'
+endif
+
+# added for v2.3.1
+if vkd3d_platform != 'windows' and enable_d3d12
+  error('Standalone D3D12 is only supported on Windows.')
 endif
 
 add_project_arguments('-D_GNU_SOURCE',   language : 'c')
@@ -36,6 +46,11 @@ add_project_arguments('-DPACKAGE_VERSION="' + meson.project_version() + '"',   l
 
 if vkd3d_platform == 'windows'
   add_project_arguments('-D_WIN32_WINNT=0x600', language : 'c')
+endif
+
+# added for v2.3.1
+if enable_d3d12
+  add_project_arguments('-DVKD3D_BUILD_STANDALONE_D3D12', language : 'c')
 endif
 
 if enable_profiling
@@ -185,12 +200,24 @@ dxil_spirv_dep = dxil_spirv.get_variable('dxil_spirv_dep')
 subdir('include')
 subdir('libs')
 
-if vkd3d_platform == 'windows'
+# if vkd3d_platform == 'windows'
   # MinGW LD on x86 emits incorrect implib with ordinal suffixes.
   # As a workaround, just link to the system D3D12.
-  lib_d3d12 = vkd3d_compiler.find_library('d3d12')
-else
-  lib_d3d12 = d3d12_dep
+#  lib_d3d12 = vkd3d_compiler.find_library('d3d12')
+# else
+#  lib_d3d12 = d3d12_dep
+# endif
+
+# added for v2.3.1
+if vkd3d_platform == 'windows'
+  if enable_d3d12
+    lib_d3d12 = d3d12_dep
+  elif not lib_d3d12.found()
+    lib_d3d12 = vkd3d_utils_dep
+    if enable_extras
+      warning('No d3d12 lib, falling back to vkd3d_utils for extras ...')
+    endif
+  endif
 endif
 
 if vkd3d_platform == 'linux'
